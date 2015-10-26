@@ -14,15 +14,16 @@
   BSD license, all text above must be included in any redistribution
  ****************************************************/
 /*
-  Date: 21-10-2015
+  Date: 23-10-2015
   Author: J.P."Jimmy"Tey
-  TITLE: Temperature reading acquired from K-type thermocouple and displayed
-         on LCD.
+  TITLE: Temperature reading acquired from K-type thermocouple and 
+         displayed on LCD.
   Objective: 1. To read temperautre from K-type thermocouple through SPI
                 interface.
              2. To display temeprature reading onto backlit-LCD
              3. Serial output for data logging on computer
-  Version: 0.2.0
+             4. Data smoothing
+  Version: 0.3.0
  */
  
 #include <SPI.h>
@@ -34,7 +35,8 @@ int thermoCS = 9;
 int thermoDO = 10;
 int delaytime=1000;
 //define degree symbol
-byte deg[8] = {
+byte deg[8] = 
+{
   B00110,
   B01001,
   B01001,
@@ -45,13 +47,20 @@ byte deg[8] = {
   B00000,
 };
 
+//Define variables for smoothing
+const int numReadings = 10;
+float readings[numReadings];
+int readIndex = 0;
+float total = 0;
+float averageC = 0;
+
 // Initialize the Thermocouple
 Adafruit_MAX31855 thermocouple(thermoCLK, thermoCS, thermoDO);
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
-
   
-void setup() {
+void setup() 
+{
   Serial.begin(9600);
   lcd.createChar(0, deg);
   // set up the LCD's number of columns and rows: 
@@ -60,10 +69,17 @@ void setup() {
   lcd.print("MAX31855 test");
   // wait for MAX chip to stabilize
   delay(1000);
+
+  //Initiliaze all the readings[numReadings] inside the array to 0
+  for (int thisReading = 0; thisReading < numReadings; thisReading++)
+  {
+    readings[thisReading] = 0;
+  }
 }
 
-void loop() {
-  // basic readout test, just print the current temp
+void loop() 
+{
+  //Display internal temperature of the MAX31855K chip
    lcd.setCursor(0, 0);
    lcd.print("Int.Temp = ");
    lcd.println(thermocouple.readInternal());
@@ -77,13 +93,36 @@ void loop() {
    } 
    else 
    {
+     //Subtract the last reading in the array
+     total = total - readings[readIndex];
+     readings[readIndex] = c;
+     total = total + readings[readIndex];
+     readIndex = readIndex + 1;
+
+     //If at the end of array
+     if (readIndex >= numReadings)
+     {
+      readIndex = 0;
+     }
+
+     //Calculate the average
+     averageC = total / numReadings;
+     t = round(averageC);
+     
      lcd.print("Temp = "); 
-     lcd.print(c);
+     lcd.print(averageC);
      lcd.setCursor(14,1);
      lcd.write(byte(0)); //create the degree symbol
      lcd.print("C"); 
      //Serial output to computer serial COM port
-     Serial.println(c);
+     Serial.print(averageC);
+     Serial.print("  ");
+     //EXTRA FOR TESTING!!!
+     Serial.print(total);
+     Serial.print("***");
+     Serial.print(averageC2);
+     Serial.print("  ");
+     Serial.println(t2);
    }
     
    delay(delaytime);
