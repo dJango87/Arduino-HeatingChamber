@@ -33,7 +33,7 @@
 int thermoCLK = 8;
 int thermoCS = 9;
 int thermoDO = 10;
-int delaytime=1000;
+int delaytime=500;
 //define degree symbol
 byte deg[8] = 
 {
@@ -52,7 +52,8 @@ const int numReadings = 10;
 float readings[numReadings];
 int readIndex = 0;
 float total = 0;
-float averageC = 0;
+int averageC = 0;
+
 
 // Initialize the Thermocouple
 Adafruit_MAX31855 thermocouple(thermoCLK, thermoCS, thermoDO);
@@ -106,23 +107,19 @@ void loop()
      }
 
      //Calculate the average
-     averageC = total / numReadings;
-     t = round(averageC);
-     
+     averageC = round(total / numReadings);
+          
      lcd.print("Temp = "); 
      lcd.print(averageC);
-     lcd.setCursor(14,1);
+     lcd.print("   ");
+     lcd.setCursor(11,1);
      lcd.write(byte(0)); //create the degree symbol
      lcd.print("C"); 
      //Serial output to computer serial COM port
-     Serial.print(averageC);
-     Serial.print("  ");
-     //EXTRA FOR TESTING!!!
-     Serial.print(total);
-     Serial.print("***");
-     Serial.print(averageC2);
-     Serial.print("  ");
-     Serial.println(t2);
+     Serial.print(averageC); //integer average temperature
+     Serial.print(",");
+     //EXTRA FOR CONFIRMATION OF ROUNDING
+     Serial.println(total/numReadings); //Floating average
    }
     
    delay(delaytime);
