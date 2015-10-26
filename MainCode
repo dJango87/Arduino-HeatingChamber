@@ -21,7 +21,8 @@
   Objective: 1. To read temperautre from K-type thermocouple through SPI
                 interface.
              2. To display temeprature reading onto backlit-LCD
-  Version: 0.1.0
+             3. Serial output for data logging on computer
+  Version: 0.2.0
  */
  
 #include <SPI.h>
@@ -81,6 +82,8 @@ void loop() {
      lcd.setCursor(14,1);
      lcd.write(byte(0)); //create the degree symbol
      lcd.print("C"); 
+     //Serial output to computer serial COM port
+     Serial.println(c);
    }
     
    delay(delaytime);
