@@ -1,0 +1,78 @@
+/*
+  The purpose of this build is to insert a value into a variable in Arduino.
+  In this attempt, a voltage divider is used to vary the raw signal (0-1023)
+  read by the analog input. 
+*/
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Analog input is written by:
+  David Cuartielles
+  Modified 30 Aug 2011, by Tom Igoe
+  Reference: http://www.arduino.cc/en/Tutorial/AnalogInput
+
+  Data smoothing is created by:
+  David A. Mellis  <dam@mellis.org> 22 April 2007
+  Modified 9 Apr 2012, by Tom Igoe
+  Reference: http://www.arduino.cc/en/Tutorial/Smoothing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+int delaytime = 1000; //delay time (ms) for the loop
+
+//Analog input to vary SET VALUE
+int inputPin = A0;    // select the input pin for the potentiometer
+
+//Digital switch for setting SET VALUE
+const int digitalIn = 13;
+const int digitalOut = 1;
+int switchState = 0;
+
+//Smoothing
+const int numReadings = 10;
+int readValue[numReadings];
+int readIndex = 0;
+int totalValue = 0;
+int averageValue = 0;
+
+void setup() 
+{
+  Serial.begin(9600);
+  pinMode(digitalIn , INPUT);
+  pinMode(digitalOut, OUTPUT);
+  for (int thisReading = 0; thisReading < numReadings; thisReading++)
+  {
+    readValue[thisReading] = 0;
+  }
+}
+
+void loop() 
+{
+  switchState = digitalRead(digitalIn);
+  
+  while (switchState == HIGH)
+  {
+  totalValue = totalValue - readValue[readIndex];
+  readValue[readIndex] = analogRead(inputPin);
+  totalValue = totalValue + readValue[readIndex];
+  readIndex = readIndex +1;
+
+  if (readIndex >= numReadings)
+  {
+    readIndex = 0;
+  }
+
+  averageValue = totalValue / numReadings;
+  Serial.print("Please insert SV = ");
+  Serial.println(averageValue);
+  
+  
+  }
+
+  while (switchState == LOW)
+  {
+    Serial.print("DONE!!, SV = ");
+    Serial.println(averageValue);
+  }
+  
+  delay(delaytime);
+}
