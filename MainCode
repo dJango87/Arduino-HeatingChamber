@@ -1,29 +1,31 @@
-/*CREDIT************************************************** 
-  This is an example for the Adafruit Thermocouple Sensor w/MAX31855K
-
-  Designed specifically to work with the Adafruit Thermocouple Sensor
-  ----> https://www.adafruit.com/products/269
-
-  These displays use SPI to communicate, 3 pins are required to  
-  interface
-  Adafruit invests time and resources providing this open source code, 
-  please support Adafruit and open-source hardware by purchasing 
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.  
-  BSD license, all text above must be included in any redistribution
- ****************************************************/
 /*
-  Date: 23-10-2015
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  K-type thermocouple MAX31855 interface 
+  with LCD display is written by:
+  Limor Fried/Ladyada for Adafruit Industries.  
+  Reference: https://github.com/adafruit/Adafruit-MAX31855-library
+
+  Data smoothing is created by:
+  David A. Mellis  <dam@mellis.org>
+  Modified 9 Apr 2012, by Tom Igoe
+  Reference: http://www.arduino.cc/en/Tutorial/Smoothing
+
+    
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+/*
+  Date: 27-10-2015
   Author: J.P."Jimmy"Tey
   TITLE: Temperature reading acquired from K-type thermocouple and 
          displayed on LCD.
   Objective: 1. To read temperautre from K-type thermocouple through SPI
                 interface.
-             2. To display temeprature reading onto backlit-LCD
+             2. To display temperature reading onto backlit-LCD
              3. Serial output for data logging on computer
              4. Data smoothing
-  Version: 0.3.0
+             5. Serial output
+             6. 
+  Version: 0.4.0
  */
  
 #include <SPI.h>
