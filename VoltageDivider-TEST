@@ -17,7 +17,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-int delaytime = 1000; //delay time (ms) for the loop
+int delaytime = 500; //delay time (ms) for the loop
 
 //Analog input to vary SET VALUE
 int inputPin = A0;    // select the input pin for the potentiometer
@@ -49,30 +49,32 @@ void loop()
 {
   switchState = digitalRead(digitalIn);
   
-  while (switchState == HIGH)
+  if (switchState == HIGH)
   {
-  totalValue = totalValue - readValue[readIndex];
-  readValue[readIndex] = analogRead(inputPin);
-  totalValue = totalValue + readValue[readIndex];
-  readIndex = readIndex +1;
+    totalValue = totalValue - readValue[readIndex];
+    readValue[readIndex] = analogRead(inputPin);
+    totalValue = totalValue + readValue[readIndex];
+    readIndex = readIndex +1;
 
-  if (readIndex >= numReadings)
-  {
-    readIndex = 0;
+    if (readIndex >= numReadings)
+    {
+      readIndex = 0;
+    }
+
+    averageValue = totalValue / numReadings;
+    Serial.print("Please insert SV = ");
+    Serial.println(averageValue);
+  
+    delay(100);
   }
 
-  averageValue = totalValue / numReadings;
-  Serial.print("Please insert SV = ");
-  Serial.println(averageValue);
-  
-  
-  }
-
-  while (switchState == LOW)
+  if (switchState == LOW)
   {
     Serial.print("DONE!!, SV = ");
     Serial.println(averageValue);
+
+    delay(delaytime);
   }
   
-  delay(delaytime);
+  //delay(delaytime);
 }
