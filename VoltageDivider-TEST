@@ -17,6 +17,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+#include <LiquidCrystal.h>
+
 int delaytime = 500; //delay time (ms) for the loop
 
 //Analog input to vary SET VALUE
@@ -28,25 +30,39 @@ const int digitalOut = 1;
 int switchState = 0;
 
 //Smoothing
-const int numReadings = 10;
-int readValue[numReadings];
+const int numReadings = 5;
+float readValue[numReadings];
 int readIndex = 0;
-int totalValue = 0;
-int averageValue = 0;
+float totalValue = 0;
+float averageValue = 0;
+int setValue = 0;
+
+//Initilise LCD
+LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
 
 void setup() 
 {
   Serial.begin(9600);
   pinMode(digitalIn , INPUT);
   pinMode(digitalOut, OUTPUT);
+  lcd.begin(16, 2);
+  lcd.print("Testing . ");
+  delay(500);
+  lcd.print(". ");
+  delay(500);
+  lcd.print(".");
+  delay(1000);
   for (int thisReading = 0; thisReading < numReadings; thisReading++)
   {
     readValue[thisReading] = 0;
   }
+  delay(1000);
 }
 
 void loop() 
 {
+  lcd.setCursor(0, 0);
+  
   switchState = digitalRead(digitalIn);
   
   if (switchState == HIGH)
@@ -61,17 +77,20 @@ void loop()
       readIndex = 0;
     }
 
-    averageValue = totalValue / numReadings;
-    Serial.print("Please insert SV = ");
-    Serial.println(averageValue);
+    averageValue = (totalValue / numReadings) / 1023 * 480;
+    setValue = round(averageValue)+20;
+    lcd.print("SV = ");
+    lcd.print(setValue);
+    lcd.println("          ");
   
     delay(100);
   }
 
   if (switchState == LOW)
   {
-    Serial.print("DONE!!, SV = ");
-    Serial.println(averageValue);
+    lcd.print("DONE!, SV = ");
+    lcd.print(setValue);
+    lcd.println("        ");
 
     delay(delaytime);
   }
