@@ -1,5 +1,4 @@
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
   K-type thermocouple MAX31855 interface 
   with LCD display is written by:
   Limor Fried/Ladyada for Adafruit Industries.  
@@ -10,11 +9,13 @@
   Modified 9 Apr 2012, by Tom Igoe
   Reference: http://www.arduino.cc/en/Tutorial/Smoothing
 
-    
-~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+  Analog input is written by:
+  David Cuartielles
+  Modified 30 Aug 2011, by Tom Igoe
+  Reference: http://www.arduino.cc/en/Tutorial/AnalogInput
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 /*
-  Date: 27-10-2015
+  Date: 30-10-2015
   Author: J.P."Jimmy"Tey
   TITLE: Temperature reading acquired from K-type thermocouple and 
          displayed on LCD.
@@ -24,106 +25,181 @@
              3. Serial output for data logging on computer
              4. Data smoothing
              5. Serial output
-             6. 
+             6. Voltage divider to SET VALUE + switch to enter and exit
+                SET VALUE mode
   Version: 0.4.0
- */
+*/
  
 #include <SPI.h>
 #include "Adafruit_MAX31855.h"
 #include <LiquidCrystal.h>
 
+int delaytime=500; //delay time for temperature monitoring loop
+
+//Define degree symbol
+byte deg[8] = {
+                B00110,
+                B01001,
+                B01001,
+                B00110,
+                B00000,
+                B00000,
+                B00000,
+                B00000,
+              };
+
+//**********THERMOCOUPLE (MAX31855K)**********
+//Define SPI pins for MAX31855K
 int thermoCLK = 8;
-int thermoCS = 9;
-int thermoDO = 10;
-int delaytime=500;
-//define degree symbol
-byte deg[8] = 
-{
-  B00110,
-  B01001,
-  B01001,
-  B00110,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-};
-
-//Define variables for smoothing
-const int numReadings = 10;
-float readings[numReadings];
-int readIndex = 0;
-float total = 0;
-int averageC = 0;
-
-
+int thermoCS  = 9;
+int thermoDO  = 10;
 // Initialize the Thermocouple
 Adafruit_MAX31855 thermocouple(thermoCLK, thermoCS, thermoDO);
-// initialize the library with the numbers of the interface pins
+//**********THERMOCOUPLE (MAX31855K)**********
+
+//**********TEMPERATURE SMOOTHING**********
+//Define variables for smoothing TEMPERATURE
+const int numReadings = 10;
+float     readTemp[numReadings];
+int       readIndex   = 0;
+float     total       = 0;
+int       averageC    = 0;
+//**********TEMPERATURE SMOOTHING**********
+
+//**********SET VALUE**********
+//Analog input to vary SET VALUE
+const int MaxT        = 350; //Maximum SET VALUE
+int       inputPin    = A0;
+//Digital switch for setting SET VALUE
+const int digitalIn   = 13;
+const int digitalOut  = 1;
+int       switchState = 0;
+//Smoothing
+const int numReadings2 = 5;
+float     readValue[numReadings2];
+int       readIndex2   = 0;
+float     totalValue   = 0;
+float     averageValue = 0;
+int       setValue     = 0;
+//**********SET VALUE**********
+
+// Initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
   
 void setup() 
 {
   Serial.begin(9600);
-  lcd.createChar(0, deg);
-  // set up the LCD's number of columns and rows: 
-  lcd.begin(16, 2);
-  
-  lcd.print("MAX31855 test");
-  // wait for MAX chip to stabilize
+  pinMode(digitalIn,  INPUT);
+  pinMode(digitalOut, OUTPUT);
+  lcd.createChar(0, deg); //Create the degree symbol
+  lcd.begin(16, 2); //set up the LCD's no. of columns and rows
+  lcd.print("MAX31855 test"); // wait for MAX chip to stabilize
   delay(1000);
-
-  //Initiliaze all the readings[numReadings] inside the array to 0
+  //Initialise all the readTemp[numReadings] inside the array to 0
   for (int thisReading = 0; thisReading < numReadings; thisReading++)
   {
-    readings[thisReading] = 0;
+    readTemp[thisReading] = 0;
   }
+  //Initialise all the readValue[numReadings2] insided the array to 0
+  for (int thisReading2 = 0; thisReading2 < numReadings2; thisReading2++)
+  {
+    readValue[thisReading2] = 0;
+  }
+  delay(1000);
 }
 
 void loop() 
 {
-  //Display internal temperature of the MAX31855K chip
-   lcd.setCursor(0, 0);
-   lcd.print("Int.Temp = ");
-   lcd.println(thermocouple.readInternal());
-   lcd.print("  ");
-     
-   double c = thermocouple.readCelsius();
-   lcd.setCursor(0, 1);
-   if (isnan(c)) 
-   {
-     lcd.print("T/C Problem");
-   } 
-   else 
-   {
-     //Subtract the last reading in the array
-     total = total - readings[readIndex];
-     readings[readIndex] = c;
-     total = total + readings[readIndex];
-     readIndex = readIndex + 1;
+  lcd.setCursor(0, 0); //1st column, 1st row
+  switchState = digitalRead(digitalIn);
 
-     //If at the end of array
-     if (readIndex >= numReadings)
-     {
-      readIndex = 0;
-     }
+//**********Enter SET VALUE mode**********
+  if (switchState == HIGH)
+  {
+    totalValue = totalValue - readValue[readIndex2];
+    readValue[readIndex2] = analogRead(inputPin);
+    totalValue = totalValue + readValue[readIndex2];
+    readIndex2 = readIndex2 + 1;
 
-     //Calculate the average
-     averageC = round(total / numReadings);
-          
-     lcd.print("Temp = "); 
-     lcd.print(averageC);
-     lcd.print("   ");
-     lcd.setCursor(11,1);
-     lcd.write(byte(0)); //create the degree symbol
-     lcd.print("C"); 
-     //Serial output to computer serial COM port
-     Serial.print(averageC); //integer average temperature
-     Serial.print(",");
-     //EXTRA FOR CONFIRMATION OF ROUNDING
-     Serial.println(total/numReadings); //Floating average
-   }
+    if (readIndex2 >= numReadings2)
+    {
+      readIndex2 = 0;
+    }
+
+    averageValue = (totalValue / numReadings2) /1023 * 332;
+    setValue = round(averageValue) + 20;
+    lcd.print("SV(");
+    lcd.write(byte(0));
+    lcd.print("C)= ");
+    lcd.print(setValue);
+    lcd.print("      ");
+    lcd.setCursor(0, 1);
+    lcd.print("Set T, Max350  ");
+
+    //Limit the allowed SET VALUE is exceed "MaxT"
+    if (setValue >= MaxT)
+    {
+      setValue = MaxT;
+    }
+        
+    delay(100); //delay time for SET VALUE loop
+  }
+//**********Enter SET VALUE mode**********
+
+//**********Exit SET VALUE mode**********
+//**********Monitor Temperature**********
+  else if (switchState == LOW)
+  {
+    double c = thermocouple.readCelsius();
+
+    //**********Thermocouple signal LOST**********
+    if (isnan(c))
+    {
+      lcd.setCursor(0, 1); //1st column, 2nd row
+      lcd.print("T/C Problem");
+      delay(500);
+      lcd.clear();
+    }
+    //**********Thermocouple signal LOST**********
     
-   delay(delaytime);
+    else
+    {
+      lcd.setCursor(0, 0); //1st column, 1st row
+      lcd.print("SV(");
+      lcd.write(byte(0));
+      lcd.print("C)= ");
+      lcd.print(setValue);
+      lcd.print("   ");
+      lcd.setCursor(12, 0);
+      lcd.print("LOCK");
+     
+      total = total - readTemp[readIndex];
+      double c = thermocouple.readCelsius();
+      readTemp[readIndex] = c;
+      total = total + readTemp[readIndex];
+      readIndex = readIndex + 1;
 
+      if (readIndex >= numReadings)
+      {
+        readIndex = 0;
+      }
+
+      averageC = round(total / numReadings);
+
+      lcd.setCursor(0, 1); //1st column, 2nd row
+      lcd.print("PV(");
+      lcd.write(byte(0));
+      lcd.print("C)= ");
+      lcd.print(averageC);
+      lcd.print("      ");
+      //Serial output to computer serial COM port [OPTIONAL]
+      //Serial.print(averageC); //integer average temperature
+      //Serial.print(",");
+      //EXTRA FOR CONFIRMATION OF ROUNDING
+      //Serial.println(total/numReadings); //Floating average
+    }
+    delay(delaytime);
+  }
+//**********Monitor Temperature**********
+//**********Exit SET VALUE mode**********
 }
