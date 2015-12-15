@@ -1,4 +1,5 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
   K-type thermocouple MAX31855 interface 
   with LCD display is written by:
   Limor Fried/Ladyada for Adafruit Industries.  
@@ -13,9 +14,13 @@
   David Cuartielles
   Modified 30 Aug 2011, by Tom Igoe
   Reference: http://www.arduino.cc/en/Tutorial/AnalogInput
-~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*
-  Date: 30-10-2015
+
+  PID (ver1.1.1) is written by:
+  Brett Beauregard <br3ttb@gmail.com> brettbeauregard.com
+  Reference: http://playground.arduino.cc/Code/PIDLibrary  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Date: 15-12-2015
   Author: J.P."Jimmy"Tey
   TITLE: Temperature reading acquired from K-type thermocouple and 
          displayed on LCD.
@@ -27,12 +32,15 @@
              5. Serial output
              6. Voltage divider to SET VALUE + switch to enter and exit
                 SET VALUE mode
-  Version: 0.4.0
+             7. PID control
+  Version: 0.5.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
  
 #include <SPI.h>
 #include "Adafruit_MAX31855.h"
 #include <LiquidCrystal.h>
+#include <PID_v1.h>
 
 int delaytime=500; //delay time for temperature monitoring loop
 
@@ -83,6 +91,15 @@ float     averageValue = 0;
 int       setValue     = 0;
 //**********SET VALUE**********
 
+//**********PID**********
+int RelayPin = 8;
+double Setpoint, Input, Output; //define variables
+//specify the links and initial tuning parameters
+PID myPID(&Input, &Output, &Setpoint,2,5,1, DIRECT);
+int WindowSize = 5000;
+unsigned long windowStartTime;
+//**********PID**********
+
 // Initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
   
@@ -105,6 +122,13 @@ void setup()
   {
     readValue[thisReading2] = 0;
   }
+
+  //tell the PID to range between 0 and the full window size
+  myPID.SetOutputLimits(0, WindowSize);
+
+  //turn the PID on
+  myPID.SetMode(AUTOMATIC);
+  
   delay(1000);
 }
 
@@ -141,13 +165,16 @@ void loop()
     {
       setValue = MaxT;
     }
-        
+
+    Setpoint = setValue;
+    
     delay(100); //delay time for SET VALUE loop
   }
 //**********Enter SET VALUE mode**********
 
 //**********Exit SET VALUE mode**********
 //**********Monitor Temperature**********
+//**************PID Control**************
   else if (switchState == LOW)
   {
     double c = thermocouple.readCelsius();
@@ -185,6 +212,21 @@ void loop()
       }
 
       averageC = round(total / numReadings);
+      
+      Input = averageC; //Input for PID
+      myPID.Compute(); //Compute PID
+
+      if(millis() - windowStartTime > WindowSize)
+      {
+        windowStartTime += WindowSize;
+      }
+
+      //**********PID On/Off**********
+      if (Output < millis() - windowStartTime)
+      { digitalWrite(RelayPin, HIGH); }
+      else
+      { digitalWrite(RelayPin, LOW);  }
+      //**********PID On/Off**********
 
       lcd.setCursor(0, 1); //1st column, 2nd row
       lcd.print("PV(");
@@ -198,8 +240,9 @@ void loop()
       //EXTRA FOR CONFIRMATION OF ROUNDING
       //Serial.println(total/numReadings); //Floating average
     }
-    delay(delaytime);
+    //delay(delaytime);
   }
+//**************PID Control**************
 //**********Monitor Temperature**********
 //**********Exit SET VALUE mode**********
 }
