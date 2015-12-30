@@ -150,7 +150,7 @@ void loop()
       readIndex2 = 0;
     }
 
-    averageValue = (totalValue / numReadings2) /1023 * 232;
+    averageValue = (totalValue / numReadings2) /1023 * 180;
     setValue = round(averageValue) + 20;
     lcd.print("SV(");
     lcd.write(byte(0));
@@ -222,7 +222,7 @@ void loop()
       }
 
       //**********PID On/Off**********
-      if (Output < millis() - windowStartTime)
+      if (Output > millis() - windowStartTime)
       { digitalWrite(RelayPin, HIGH); }
       else
       { digitalWrite(RelayPin, LOW);  }
