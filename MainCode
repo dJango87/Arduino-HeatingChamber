@@ -20,10 +20,10 @@
   Reference: http://playground.arduino.cc/Code/PIDLibrary  
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~ACKNOWLEDGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  Date: 15-12-2015
+  Date: 30-12-2015
   Author: J.P."Jimmy"Tey
   TITLE: Temperature reading acquired from K-type thermocouple and 
-         displayed on LCD.
+         displayed on LCD with PID control
   Objective: 1. To read temperautre from K-type thermocouple through SPI
                 interface.
              2. To display temperature reading onto backlit-LCD
@@ -31,9 +31,9 @@
              4. Data smoothing
              5. Serial output
              6. Voltage divider to SET VALUE + switch to enter and exit
-                SET VALUE mode
+                SET VALUE mode (Max value = 200)
              7. PID control
-  Version: 0.5.0
+  Version: 0.6.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
  
@@ -76,11 +76,11 @@ int       averageC    = 0;
 
 //**********SET VALUE**********
 //Analog input to vary SET VALUE
-const int MaxT        = 350; //Maximum SET VALUE
+const int MaxT        = 200; //Maximum SET VALUE
 int       inputPin    = A0;
 //Digital switch for setting SET VALUE
 const int digitalIn   = 13;
-const int digitalOut  = 1;
+//const int digitalOut  = 1;
 int       switchState = 0;
 //Smoothing
 const int numReadings2 = 5;
@@ -92,7 +92,7 @@ int       setValue     = 0;
 //**********SET VALUE**********
 
 //**********PID**********
-int RelayPin = 8;
+int RelayPin = 11;
 double Setpoint, Input, Output; //define variables
 //specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint,2,5,1, DIRECT);
@@ -107,7 +107,7 @@ void setup()
 {
   Serial.begin(9600);
   pinMode(digitalIn,  INPUT);
-  pinMode(digitalOut, OUTPUT);
+//  pinMode(digitalOut, OUTPUT);
   lcd.createChar(0, deg); //Create the degree symbol
   lcd.begin(16, 2); //set up the LCD's no. of columns and rows
   lcd.print("MAX31855 test"); // wait for MAX chip to stabilize
@@ -150,7 +150,7 @@ void loop()
       readIndex2 = 0;
     }
 
-    averageValue = (totalValue / numReadings2) /1023 * 332;
+    averageValue = (totalValue / numReadings2) /1023 * 232;
     setValue = round(averageValue) + 20;
     lcd.print("SV(");
     lcd.write(byte(0));
@@ -158,7 +158,7 @@ void loop()
     lcd.print(setValue);
     lcd.print("      ");
     lcd.setCursor(0, 1);
-    lcd.print("Set T, Max350  ");
+    lcd.print("Set T, Max200  ");
 
     //Limit the allowed SET VALUE is exceed "MaxT"
     if (setValue >= MaxT)
