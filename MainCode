@@ -33,8 +33,8 @@
              6. Voltage divider to SET VALUE + switch to enter and exit
                 SET VALUE mode (Max value = 200)
              7. PID control
-             8. Minor changes
-  Version: 0.6.1
+             8. TEST: determine loop time
+  Version: 0.6.1_test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
  
@@ -73,6 +73,7 @@ float     readTemp[numReadings];
 int       readIndex   = 0;
 float     total       = 0;
 int       averageC    = 0;
+double    c = 0;
 //**********TEMPERATURE SMOOTHING**********
 
 //**********SET VALUE**********
@@ -96,7 +97,7 @@ int       setValue     = 0;
 int RelayPin = 12;
 double Setpoint, Input, Output; //define variables
 //specify the links and initial tuning parameters
-PID myPID(&Input, &Output, &Setpoint,2,5,1, DIRECT);
+PID myPID(&Input, &Output, &Setpoint,2,0.4,2, DIRECT);
 int WindowSize = 5000;
 unsigned long windowStartTime;
 //**********PID**********
@@ -137,6 +138,8 @@ void setup()
 
 void loop() 
 {
+  unsigned long t_start = micros(); //For testing purpose ONLY
+  
   lcd.setCursor(0, 0); //1st column, 1st row
   switchState = digitalRead(digitalIn);
 
@@ -153,7 +156,7 @@ void loop()
       readIndex2 = 0;
     }
 
-    averageValue = (totalValue / numReadings2) /1023 * 180;
+    averageValue = (totalValue / numReadings2) /1023 * 182;
     setValue = round(averageValue) + 20;
     lcd.print("SV(");
     lcd.write(byte(0));
@@ -170,7 +173,7 @@ void loop()
     }
 
     Setpoint = setValue;
-    
+
     delay(100); //delay time for SET VALUE loop
   }
 //**********Enter SET VALUE mode**********
@@ -180,7 +183,7 @@ void loop()
 //**************PID Control**************
   else if (switchState == LOW)
   {
-    double c = thermocouple.readCelsius();
+    c = thermocouple.readCelsius();
 
     //**********Thermocouple signal LOST**********
     if (isnan(c))
@@ -204,7 +207,7 @@ void loop()
       lcd.print("LOCK");
      
       total = total - readTemp[readIndex];
-      double c = thermocouple.readCelsius();
+      //double c = thermocouple.readCelsius();
       readTemp[readIndex] = c;
       total = total + readTemp[readIndex];
       readIndex = readIndex + 1;
@@ -217,6 +220,8 @@ void loop()
       averageC = round(total / numReadings);
       
       Input = averageC; //Input for PID
+
+//      Input = thermocouple.readCelsius();
       myPID.Compute(); //Compute PID
 
       if(millis() - windowStartTime > WindowSize)
@@ -225,7 +230,7 @@ void loop()
       }
 
       //**********PID On/Off**********
-      if (Output > millis() - windowStartTime)
+      if (Output < millis() - windowStartTime)
       { digitalWrite(RelayPin, HIGH); }
       else
       { digitalWrite(RelayPin, LOW);  }
@@ -237,6 +242,13 @@ void loop()
       lcd.print("C)= ");
       lcd.print(averageC);
       lcd.print("      ");
+
+      
+      //For testing purpose ONLY
+      unsigned long t_end = micros();
+      unsigned long delta = t_end - t_start;
+      Serial.println(delta);
+
       //Serial output to computer serial COM port [OPTIONAL]
       //Serial.print(averageC); //integer average temperature
       //Serial.print(",");
